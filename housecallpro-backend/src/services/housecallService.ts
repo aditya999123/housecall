@@ -114,3 +114,19 @@ export const findCustomerByQuery = async (fields: { name?: string; email?: strin
 
     return Array.from(uniqueCustomersMap.values());
 };
+
+
+export const findCustomerById = async (id: string): Promise<Customer | null> => {
+    try {
+        const response = await api.get(`/customers/${id}`);
+        const customer: Customer = response.data;
+        return customer;
+    } catch (error: any) {
+        if (error.response && error.response.status === 404) {
+            // Customer not found
+            return null;
+        }
+        console.error(`Error fetching customer with ID "${id}":`, error.response?.data || error.message);
+        throw new Error('Failed to retrieve customer.');
+    }
+};

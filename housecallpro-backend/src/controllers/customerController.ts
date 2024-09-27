@@ -1,7 +1,7 @@
 // src/controllers/customerController.ts
 
 import { Request, Response } from 'express';
-import { findCustomerByQuery } from '../services/housecallService';
+import { findCustomerByQuery, findCustomerById } from '../services/housecallService';
 
 /**
  * Controller to check if a customer exists based on provided information.
@@ -25,5 +25,23 @@ export const checkCustomerExists = async (req: Request, res: Response) => {
     } catch (error: any) {
         console.error('Error in checkCustomerExists:', error.message);
         res.status(500).json({ error: error.message || 'Failed to check customer existence.' });
+    }
+};
+
+
+export const getCustomerById = async (req: Request, res: Response) => {
+    const { id } = req.params;
+
+    try {
+        const customer = await findCustomerById(id);
+
+        if (customer) {
+            res.json(customer);
+        } else {
+            res.status(404).json({ error: 'Customer not found.' });
+        }
+    } catch (error: any) {
+        console.error('Error in getCustomerById:', error.message);
+        res.status(500).json({ error: error.message || 'Failed to retrieve customer.' });
     }
 };
