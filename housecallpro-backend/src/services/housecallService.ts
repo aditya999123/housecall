@@ -51,6 +51,24 @@ interface Job {
     // Add other relevant fields as per API response
 }
 
+
+interface CreateCustomerInput {
+    first_name: string;
+    last_name: string;
+    email: string;
+    mobile_number: string;
+    home_number?: string | null;
+    work_number?: string | null;
+    company?: string | null;
+    notifications_enabled: boolean;
+    lead_source?: string | null;
+    notes?: string | null;
+    company_name?: string | null;
+    company_id?: string | null;
+    tags: any[];
+    addresses: Address[];
+}
+
 /**
  * Finds customers by searching each provided field independently using the "q" parameter
  * and merges the results to eliminate duplicates.
@@ -134,5 +152,15 @@ export const findCustomerById = async (id: string): Promise<Customer | null> => 
         }
         console.error(`Error fetching customer with ID "${id}":`, error.response?.data || error.message);
         throw new Error('Failed to retrieve customer.');
+    }
+};
+
+export const createCustomerSvc = async (input: CreateCustomerInput): Promise<Customer> => {
+    try {
+        const response = await api.post('/customers', input);
+        return response.data;
+    } catch (error: any) {
+        console.error('Error creating customer via external API:', error.response?.data || error.message);
+        throw new Error('Failed to create customer.');
     }
 };

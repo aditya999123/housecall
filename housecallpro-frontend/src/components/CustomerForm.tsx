@@ -6,6 +6,7 @@ import debounce from 'lodash.debounce';
 import { useNavigate } from 'react-router-dom';
 
 interface Address {
+  type: string;
   street: string;
   street_line_2?: string;
   city?: string;
@@ -59,7 +60,7 @@ const CustomerForm: React.FC = () => {
   const [street, setStreet] = useState('');
   const [streetLine2, setStreetLine2] = useState('');
   const [city, setCity] = useState('');
-  const [state, setState] = useState('');
+  const [stateField, setStateField] = useState('');
   const [zip, setZip] = useState('');
   const [country, setCountry] = useState('');
 
@@ -80,6 +81,7 @@ const CustomerForm: React.FC = () => {
       if (email) queryParts.push(email);
       if (phone) queryParts.push(phone);
       const addressParts: string[] = [];
+      if (address.type) queryParts.push(address.type);
       if (address.street) addressParts.push(address.street);
       if (address.street_line_2) addressParts.push(address.street_line_2);
       if (address.city) addressParts.push(address.city);
@@ -105,7 +107,7 @@ const CustomerForm: React.FC = () => {
           name,
           email,
           phone,
-          address,
+          addresses: [address],
         });
 
         const data = response.data;
@@ -132,10 +134,11 @@ const CustomerForm: React.FC = () => {
    */
   useEffect(() => {
     const address: Address = {
+      type,
       street,
       street_line_2: streetLine2,
       city,
-      state: state,
+      state: stateField,
       zip,
       country: country || null,
     };
@@ -145,7 +148,7 @@ const CustomerForm: React.FC = () => {
     return () => {
       fetchCustomers.cancel();
     };
-  }, [name, email, phone, type, street, streetLine2, city, state, zip, country, fetchCustomers]);
+  }, [name, email, phone, type, street, streetLine2, city, stateField, zip, country, fetchCustomers]);
 
   /**
    * Helper function to combine first and last names
@@ -160,7 +163,7 @@ const CustomerForm: React.FC = () => {
   const formatAddress = (addresses: Address[]): string => {
     if (addresses.length === 0) return 'N/A';
     const addr = addresses[0]; // Assuming the first address is primary
-    const parts = [addr.street];
+    const parts = [addr.type, addr.street];
     if (addr.street_line_2) parts.push(addr.street_line_2);
     if (addr.city) parts.push(addr.city);
     if (addr.state) parts.push(addr.state);
@@ -173,8 +176,34 @@ const CustomerForm: React.FC = () => {
    * Handler for creating a new customer
    */
   const handleCreateCustomer = async () => {
-    // Placeholder function: Implement the logic to create a new customer
-    alert('Create Customer functionality is not implemented yet.');
+    const [firstName, lastName] = name.split(' ');
+
+    const customerData = {
+      first_name: firstName || name,
+      last_name: lastName || '',
+      email,
+      mobile_number: phone,
+      addresses: [
+        {
+          street,
+          street_line_2: streetLine2 || undefined,
+          city: city || undefined,
+          state: stateField || undefined,
+          zip: zip || undefined,
+          country: country || null,
+        },
+      ],
+      notifications_enabled: true,
+    };
+
+    try {
+      const response = await serverApi.post('/api/customers', customerData);
+      const createdCustomer: Customer = response.data;
+      navigate(`/customers/${createdCustomer.id}`);
+    } catch (err: any) {
+      console.error('Error creating customer:', err);
+      setError('Failed to create customer.');
+    }
   };
 
   /**
@@ -278,8 +307,8 @@ const CustomerForm: React.FC = () => {
           <input
             type="text"
             className="w-full border rounded px-3 py-2"
-            value={state}
-            onChange={(e) => setState(e.target.value)}
+            value={stateField}
+            onChange={(e) => setStateField(e.target.value)}
             placeholder="Enter state"
           />
         </div>
@@ -370,7 +399,7 @@ const CustomerForm: React.FC = () => {
       )}
 
       {/* No Customers Found Message */}
-      {!loading && !error && customers.length === 0 && (name || email || phone || type || street || streetLine2 || city || state || zip || country) && (
+      {!loading && !error && customers.length === 0 && (name || email || phone || type || street || streetLine2 || city || stateField || zip || country) && (
         <div className="mt-6">
           <p className="text-gray-700">No existing customers found with the provided information.</p>
         </div>
