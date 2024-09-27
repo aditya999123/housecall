@@ -3,8 +3,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios, { AxiosInstance } from 'axios';
 import debounce from 'lodash.debounce';
+import { useNavigate } from 'react-router-dom';
 
-// Updated Address Interface to match API response
 interface Address {
   id: string;
   type: string;
@@ -16,7 +16,6 @@ interface Address {
   country?: string | null;
 }
 
-// Updated Customer Interface to match API response
 interface Customer {
   id: string;
   first_name: string;
@@ -33,7 +32,7 @@ interface Customer {
   updated_at: string;
   company_name?: string | null;
   company_id?: string | null;
-  tags: any[]; // Consider defining a more specific type if possible
+  tags: any[];
   addresses: Address[];
 }
 
@@ -50,6 +49,8 @@ const serverApi: AxiosInstance = axios.create({
 });
 
 const CustomerForm: React.FC = () => {
+  const navigate = useNavigate();
+
   // State variables for form fields
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -147,6 +148,21 @@ const CustomerForm: React.FC = () => {
     return parts.join(', ');
   };
 
+  /**
+   * Handler for creating a new customer
+   */
+  const handleCreateCustomer = async () => {
+    // Placeholder function: Implement the logic to create a new customer
+    alert('Create Customer functionality is not implemented yet.');
+  };
+
+  /**
+   * Handler for selecting a customer
+   */
+  const handleSelectCustomer = (customer: Customer) => {
+    navigate(`/customers/${customer.id}`);
+  };
+
   return (
     <div className="bg-white p-6 rounded shadow-md">
       <h2 className="text-2xl mb-4">Customer Information</h2>
@@ -200,6 +216,16 @@ const CustomerForm: React.FC = () => {
         </div>
       </div>
 
+      {/* Create Customer Button */}
+      <div className="mt-4">
+        <button
+          onClick={handleCreateCustomer}
+          className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+        >
+          Create Customer
+        </button>
+      </div>
+
       {/* Loading Indicator */}
       {loading && <p className="mt-4 text-blue-500">Loading...</p>}
 
@@ -219,6 +245,7 @@ const CustomerForm: React.FC = () => {
                   <th className="py-2 px-4 border">Email</th>
                   <th className="py-2 px-4 border">Mobile Number</th>
                   <th className="py-2 px-4 border">Address</th>
+                  <th className="py-2 px-4 border">Actions</th> {/* New Actions Column */}
                 </tr>
               </thead>
               <tbody>
@@ -232,6 +259,14 @@ const CustomerForm: React.FC = () => {
                     </td>
                     <td className="py-2 px-4 border">
                       {formatAddress(customer.addresses)}
+                    </td>
+                    <td className="py-2 px-4 border">
+                      <button
+                        onClick={() => handleSelectCustomer(customer)}
+                        className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+                      >
+                        Select Customer
+                      </button>
                     </td>
                   </tr>
                 ))}
