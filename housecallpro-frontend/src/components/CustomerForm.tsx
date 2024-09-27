@@ -1,51 +1,13 @@
 // src/components/CustomerForm.tsx
 
 import React, { useState, useEffect, useCallback } from 'react';
-import axios, { AxiosInstance } from 'axios';
 import debounce from 'lodash.debounce';
 import { useNavigate } from 'react-router-dom';
-
-interface Address {
-  type: string;
-  street: string;
-  street_line_2?: string;
-  city?: string;
-  state?: string;
-  zip?: string;
-  country?: string | null;
-}
-
-interface Customer {
-  id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  mobile_number: string;
-  home_number?: string | null;
-  work_number?: string | null;
-  company?: string | null;
-  notifications_enabled: boolean;
-  lead_source?: string | null;
-  notes?: string | null;
-  created_at: string;
-  updated_at: string;
-  company_name?: string | null;
-  company_id?: string | null;
-  tags: any[];
-  addresses: Address[];
-}
-
-interface ApiResponse {
-  exists: boolean;
-  customers: Customer[];
-}
-
-const serverApi: AxiosInstance = axios.create({
-  baseURL: 'http://localhost:5001',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
+import { Customer, Address } from '../types';
+import {
+  checkCustomerExists,
+  createCustomer,
+} from '../api/customers';
 
 const CustomerForm: React.FC = () => {
   const navigate = useNavigate();
@@ -103,14 +65,12 @@ const CustomerForm: React.FC = () => {
 
       try {
         // Make API call to check if customer exists
-        const response = await serverApi.post<ApiResponse>('/api/customers/exist', {
+        const data = await checkCustomerExists({
           name,
           email,
           phone,
           addresses: [address],
         });
-
-        const data = response.data;
 
         if (data.exists && data.customers.length > 0) {
           setCustomers(data.customers);
@@ -151,14 +111,14 @@ const CustomerForm: React.FC = () => {
   }, [name, email, phone, type, street, streetLine2, city, stateField, zip, country, fetchCustomers]);
 
   /**
-   * Helper function to combine first and last names
+   * Helper function to combine first and last names.
    */
   const getFullName = (customer: Customer): string => {
     return `${customer.first_name} ${customer.last_name}`;
   };
 
   /**
-   * Helper function to format address
+   * Helper function to format address.
    */
   const formatAddress = (addresses: Address[]): string => {
     if (addresses.length === 0) return 'N/A';
@@ -173,10 +133,12 @@ const CustomerForm: React.FC = () => {
   };
 
   /**
-   * Handler for creating a new customer
+   * Handler for creating a new customer.
    */
   const handleCreateCustomer = async () => {
-    const [firstName, lastName] = name.split(' ');
+    // Simple name parsing; consider enhancing this for edge cases.
+    const [firstName, ...lastNameParts] = name.trim().split(' ');
+    const lastName = lastNameParts.join(' ');
 
     const customerData = {
       first_name: firstName || name,
@@ -185,6 +147,7 @@ const CustomerForm: React.FC = () => {
       mobile_number: phone,
       addresses: [
         {
+          type: type || 'Primary', // Defaulting to 'Primary' if type is not provided
           street,
           street_line_2: streetLine2 || undefined,
           city: city || undefined,
@@ -194,20 +157,25 @@ const CustomerForm: React.FC = () => {
         },
       ],
       notifications_enabled: true,
+      // Include other fields as necessary
     };
 
+    setLoading(true);
+    setError(null);
+
     try {
-      const response = await serverApi.post('/api/customers', customerData);
-      const createdCustomer: Customer = response.data;
+      const createdCustomer = await createCustomer(customerData);
       navigate(`/customers/${createdCustomer.id}`);
     } catch (err: any) {
       console.error('Error creating customer:', err);
       setError('Failed to create customer.');
+    } finally {
+      setLoading(false);
     }
   };
 
   /**
-   * Handler for selecting a customer
+   * Handler for selecting a customer.
    */
   const handleSelectCustomer = (customer: Customer) => {
     navigate(`/customers/${customer.id}`);
@@ -342,14 +310,17 @@ const CustomerForm: React.FC = () => {
       <div className="mt-4">
         <button
           onClick={handleCreateCustomer}
-          className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+          disabled={loading}
+          className={`bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 ${
+            loading ? 'opacity-50 cursor-not-allowed' : ''
+          }`}
         >
-          Create Customer
+          {loading ? 'Creating...' : 'Create Customer'}
         </button>
       </div>
 
       {/* Loading Indicator */}
-      {loading && <p className="mt-4 text-blue-500">Loading...</p>}
+      {loading && <p className="mt-4 text-blue-500">Processing...</p>}
 
       {/* Error Message */}
       {error && <p className="mt-4 text-red-500">{error}</p>}
@@ -399,11 +370,14 @@ const CustomerForm: React.FC = () => {
       )}
 
       {/* No Customers Found Message */}
-      {!loading && !error && customers.length === 0 && (name || email || phone || type || street || streetLine2 || city || stateField || zip || country) && (
-        <div className="mt-6">
-          <p className="text-gray-700">No existing customers found with the provided information.</p>
-        </div>
-      )}
+      {!loading &&
+        !error &&
+        customers.length === 0 &&
+        (name || email || phone || type || street || streetLine2 || city || stateField || zip || country) && (
+          <div className="mt-6">
+            <p className="text-gray-700">No existing customers found with the provided information.</p>
+          </div>
+        )}
     </div>
   );
 };
