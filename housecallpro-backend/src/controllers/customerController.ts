@@ -1,41 +1,29 @@
-import { Request, Response } from 'express';
-import { 
-    findCustomerByEmailOrPhone, 
-    addCustomer, 
-    scheduleJob 
-} from '../services/housecallService';
+// src/controllers/customerController.ts
 
+import { Request, Response } from 'express';
+import { findCustomerByQuery } from '../services/housecallService';
+
+/**
+ * Controller to check if a customer exists based on provided information.
+ * It searches for customers by name, email, phone, and address independently
+ * and merges the results before returning.
+ * 
+ * @param req - Express Request object containing name, email, phone, and address in the body.
+ * @param res - Express Response object to send back the result.
+ */
 export const checkCustomerExists = async (req: Request, res: Response) => {
-    const { email, phone } = req.body;
+    const { name, email, phone, address } = req.body;
+
     try {
-        const customer = await findCustomerByEmailOrPhone(email, phone);
-        if (customer) {
-            res.json({ exists: true, customer });
+        const customers = await findCustomerByQuery({ name, email, phone, address });
+
+        if (customers.length > 0) {
+            res.json({ exists: true, customers });
         } else {
             res.json({ exists: false });
         }
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to check customer existence.' });
+    } catch (error: any) {
+        console.error('Error in checkCustomerExists:', error.message);
+        res.status(500).json({ error: error.message || 'Failed to check customer existence.' });
     }
 };
-
-export const createCustomer = async (req: Request, res: Response) => {
-    const { name, email, phone, address } = req.body;
-    try {
-        const newCustomer = await addCustomer(name, email, phone, address);
-        res.json({ success: true, customer: newCustomer });
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to create customer.' });
-    }
-};
-
-export const createJob = async (req: Request, res: Response) => {
-    const { customerId, jobDetails } = req.body;
-    try {
-        const job = await scheduleJob(customerId, jobDetails);
-        res.json({ success: true, job });
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to create job.' });
-    }
-};
-

@@ -1,9 +1,11 @@
+// src/services/housecallService.ts
+
 import axios, { AxiosInstance } from 'axios';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const HOUSECALL_API_BASE = 'https://api.housecallpro.com'; // Update base URL if different
+const HOUSECALL_API_BASE = 'https://api.housecallpro.com';
 const API_KEY = process.env.HOUSECALL_API_KEY;
 
 // Create an Axios instance with necessary headers for authentication
@@ -16,12 +18,21 @@ const api: AxiosInstance = axios.create({
 });
 
 // Interface Definitions
+interface Address {
+    line1: string;
+    line2?: string;
+    city?: string;
+    state?: string;
+    zip?: string;
+    country?: string;
+}
+
 interface Customer {
     id: string;
     name: string;
     email: string;
     phone: string;
-    address: string;
+    address: Address;
     // Add other relevant fields as per API response
 }
 
@@ -33,116 +44,73 @@ interface JobDetails {
 
 interface Job {
     id: string;
-    customerId: string;
+    customer_id: string;
     service: string;
-    scheduledTime: string;
+    scheduled_time: string;
     // Add other relevant fields as per API response
 }
 
-// Find customer by email or phone
-export const findCustomerByEmailOrPhone = async (email: string, phone: string): Promise<Customer | null> => {
-    try {
-        const response = await api.get('/customers', {
-            params: {
-                // email, // Assuming the API supports filtering by email
-                // phone, // Assuming the API supports filtering by phone
-                per_page: 50, // Adjust as needed
-            },
-        });
+/**
+ * Finds customers by searching each provided field independently using the "q" parameter
+ * and merges the results to eliminate duplicates.
+ * 
+ * @param fields - An object containing optional search fields: name, email, phone, address.
+ * @returns A promise that resolves to an array of unique Customer objects.
+ */
+export const findCustomerByQuery = async (fields: { name?: string; email?: string; phone?: string; address?: string; }): Promise<Customer[]> => {
+    const { name, email, phone, address } = fields;
 
-        console.log(response.data);
+    const queries: string[] = [];
 
-        const customers: Customer[] = response.data.customers; // Adjust based on actual response structure
+    if (name) {
+        queries.push(name);
+    }
+    if (email) {
+        queries.push(email);
+    }
+    if (phone) {
+        queries.push(phone);
+    }
+    if (address) {
+        queries.push(address);
+    }
 
-        if (customers.length > 0) {
-            // Return the first matching customer
-            return customers[0];
-        } else {
-            return null;
+    if (queries.length === 0) {
+        return [];
+    }
+
+    // Perform searches in parallel for each query
+    const searchPromises = queries.map(async (q) => {
+        try {
+            console.log('q=', q);
+            const response = await api.get('/customers', {
+                params: {
+                    q, // Comprehensive search across multiple fields
+                    per_page: 50, // Adjust as needed
+                },
+            });
+
+            const customers: Customer[] = response.data.customers; // Accessing customers from response.data.customers
+            return customers;
+        } catch (error: any) {
+            console.error(`Error searching with q="${q}":`, error.response?.data || error.message);
+            return [];
         }
-    } catch (error: any) {
-        console.error('Error fetching customers:', error.response?.data || error.message);
-        throw new Error('Failed to fetch customers.');
-    }
-};
+    });
 
-// Add a new customer
-export const addCustomer = async (name: string, email: string, phone: string, address: string): Promise<Customer> => {
-    try {
-        const payload = {
-            name,
-            email,
-            phone,
-            address: {
-                line1: address, // Adjust according to API's address structure
-                // Add other address fields if required
-            },
-            // Add other customer fields if necessary
-        };
+    // Wait for all search promises to resolve
+    const results = await Promise.all(searchPromises);
 
-        const response = await api.post('/customers', payload);
+    // Flatten the array of arrays into a single array
+    const allCustomers = results.flat();
 
-        const newCustomer: Customer = response.data.data; // Adjust based on actual response structure
-
-        return newCustomer;
-    } catch (error: any) {
-        console.error('Error creating customer:', error.response?.data || error.message);
-        throw new Error('Failed to create customer.');
-    }
-};
-
-// Schedule a new job ensuring no overlap
-export const scheduleJob = async (customerId: string, jobDetails: JobDetails): Promise<Job> => {
-    try {
-        // Step 1: Fetch existing jobs for the customer within a relevant timeframe
-        const response = await api.get('/jobs', {
-            params: {
-                customer_id: customerId,
-                // Optionally, add date range filters to limit the fetched jobs
-                // For example:
-                // start_date: '2024-01-01',
-                // end_date: '2024-12-31',
-                per_page: 100, // Adjust as needed
-            },
-        });
-
-        const existingJobs: Job[] = response.data.data; // Adjust based on actual response structure
-
-        // Step 2: Check for overlapping jobs
-        const newJobStart = new Date(jobDetails.scheduledTime);
-        const newJobDuration = 2 * 60 * 60 * 1000; // Assuming 2-hour jobs; adjust as needed
-        const newJobEnd = new Date(newJobStart.getTime() + newJobDuration);
-
-        for (const job of existingJobs) {
-            const jobStart = new Date(job.scheduledTime);
-            const jobDuration = 2 * 60 * 60 * 1000; // Assuming 2-hour jobs; adjust as needed
-            const jobEnd = new Date(jobStart.getTime() + jobDuration);
-
-            // Check for overlap
-            if (
-                (newJobStart >= jobStart && newJobStart < jobEnd) ||
-                (newJobEnd > jobStart && newJobEnd <= jobEnd) ||
-                (newJobStart <= jobStart && newJobEnd >= jobEnd)
-            ) {
-                throw new Error(`Job time overlaps with an existing job (Job ID: ${job.id}).`);
-            }
+    // Deduplicate customers by their unique ID
+    const uniqueCustomersMap = new Map<string, Customer>();
+    allCustomers.forEach((customer) => {
+        if (!uniqueCustomersMap.has(customer.id)) {
+            uniqueCustomersMap.set(customer.id, customer);
         }
+    });
 
-        // Step 3: Create the new job
-        const jobPayload = {
-            customer_id: customerId,
-            service: jobDetails.service,
-            scheduled_time: jobDetails.scheduledTime, // Ensure ISO 8601 format
-            // Add other job fields if necessary
-        };
-
-        const jobResponse = await api.post('/jobs', jobPayload);
-
-        const newJob: Job = jobResponse.data.data; // Adjust based on actual response structure
-
-        return newJob;
-    } catch (error: any) {
-        console.error('Error scheduling job:', error.response?.data || error.message);
-        throw new Error(error.message || 'Failed to schedule job.');
-    }
+    return Array.from(uniqueCustomersMap.values());
 };
