@@ -1,11 +1,18 @@
+// src/controllers/jobController.ts
+
 import { Request, Response } from 'express';
-import { getJobsByCustomerId } from '../services/jobService';
+import { getJobsByCustomerId, createJob } from '../services/jobService';
+import { CreateJobPayload } from '../models/jobModel';
 
-import { createJob } from '../services/jobService';
-
+/**
+ * Controller to create a job for a specific customer.
+ * 
+ * @param req - Express Request object containing customer ID in params and job details in body.
+ * @param res - Express Response object to send back the created job.
+ */
 export const createJobForCustomer = async (req: Request, res: Response): Promise<void> => {
     const { id } = req.params; // Customer ID from URL
-    const jobData = req.body; // Job details from request body
+    const jobData: Partial<CreateJobPayload> = req.body; // Job details from request body
 
     if (!id) {
         res.status(400).json({ error: 'Customer ID is required.' });
@@ -16,7 +23,7 @@ export const createJobForCustomer = async (req: Request, res: Response): Promise
     jobData.customer_id = id;
 
     try {
-        const newJob = await createJob(jobData);
+        const newJob = await createJob(jobData as CreateJobPayload);
         res.status(201).json({ job: newJob });
     } catch (error: any) {
         console.error('Error in createJobForCustomer:', error.message);
@@ -24,6 +31,12 @@ export const createJobForCustomer = async (req: Request, res: Response): Promise
     }
 };
 
+/**
+ * Controller to retrieve all jobs for a specific customer.
+ * 
+ * @param req - Express Request object containing customer ID in params.
+ * @param res - Express Response object to send back the list of jobs.
+ */
 export const getJobsForCustomer = async (req: Request, res: Response): Promise<void> => {
     const { id } = req.params;
 

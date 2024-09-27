@@ -28,7 +28,12 @@ export const checkCustomerExists = async (req: Request, res: Response) => {
     }
 };
 
-
+/**
+ * Controller to retrieve a customer by their ID.
+ * 
+ * @param req - Express Request object containing the customer ID in the params.
+ * @param res - Express Response object to send back the customer data.
+ */
 export const getCustomerById = async (req: Request, res: Response) => {
     const { id } = req.params;
 
@@ -46,7 +51,12 @@ export const getCustomerById = async (req: Request, res: Response) => {
     }
 };
 
-
+/**
+ * Controller to create a new customer.
+ * 
+ * @param req - Express Request object containing customer details in the body.
+ * @param res - Express Response object to send back the created customer.
+ */
 export const createCustomerController = async (req: Request, res: Response) => {
     const {
         first_name,
@@ -74,13 +84,13 @@ export const createCustomerController = async (req: Request, res: Response) => {
             home_number: home_number || null,
             work_number: work_number || null,
             company: company || null,
-            notifications_enabled: notifications_enabled || false,
+            notifications_enabled: notifications_enabled ?? false,
             lead_source: lead_source || null,
             notes: notes || null,
             company_name: company_name || null,
             company_id: company_id || null,
-            tags: tags || [],
-            addresses: addresses || [],
+            tags: Array.isArray(tags) ? tags : [],
+            addresses: Array.isArray(addresses) ? addresses : [],
         });
 
         res.status(201).json(newCustomer);

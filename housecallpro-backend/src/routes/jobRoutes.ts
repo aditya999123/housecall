@@ -1,3 +1,5 @@
+// src/routes/jobRoutes.ts
+
 import express from 'express';
 import { getJobsForCustomer, createJobForCustomer } from '../controllers/jobController';
 

@@ -1,54 +1,7 @@
-import axios, { AxiosInstance } from 'axios';
-import dotenv from 'dotenv';
+// src/services/housecallService.ts
 
-dotenv.config();
-
-const HOUSECALL_API_BASE = 'https://api.housecallpro.com';
-const API_KEY = process.env.HOUSECALL_API_KEY;
-
-// Create an Axios instance with necessary headers for authentication
-const api: AxiosInstance = axios.create({
-    baseURL: HOUSECALL_API_BASE,
-    headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${API_KEY}`, // Assuming Bearer Token Authentication
-    },
-});
-
-// Interface Definitions
-interface Address {
-  street: string;
-  street_line_2?: string;
-  city?: string;
-  state?: string;
-  zip?: string;
-  country?: string | null;
-}
-
-
-interface Customer {
-    id: string;
-    name: string;
-    email: string;
-    phone: string;
-    address: Address;
-    // Add other relevant fields as per API response
-}
-
-interface JobDetails {
-    service: string;
-    scheduledTime: string; // ISO 8601 format
-    // Add other relevant fields as needed
-}
-
-interface Job {
-    id: string;
-    customer: Customer;
-    service: string;
-    scheduled_time: string;
-    // Add other relevant fields as per API response
-}
-
+import api from '../utils/apiClient';
+import { Address, Customer } from '../models/customerModel'; // Adjust the import path as needed
 
 interface CreateCustomerInput {
     first_name: string;
@@ -137,7 +90,12 @@ export const findCustomerByQuery = async (fields: { name?: string; email?: strin
     return Array.from(uniqueCustomersMap.values());
 };
 
-
+/**
+ * Finds a customer by their ID.
+ * 
+ * @param id - The ID of the customer to retrieve.
+ * @returns A promise that resolves to the Customer object or null if not found.
+ */
 export const findCustomerById = async (id: string): Promise<Customer | null> => {
     try {
         const response = await api.get(`/customers/${id}`);
@@ -153,6 +111,12 @@ export const findCustomerById = async (id: string): Promise<Customer | null> => 
     }
 };
 
+/**
+ * Creates a new customer using the Housecall Pro API.
+ * 
+ * @param input - The customer data to create.
+ * @returns A promise that resolves to the created Customer object.
+ */
 export const createCustomerSvc = async (input: CreateCustomerInput): Promise<Customer> => {
     try {
         const response = await api.post('/customers', input);
