@@ -1,7 +1,6 @@
 // src/types/index.d.ts
 
 export interface Address {
-  type: string;
   street: string;
   street_line_2?: string;
   city?: string;

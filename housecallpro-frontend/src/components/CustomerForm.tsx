@@ -18,7 +18,6 @@ const CustomerForm: React.FC = () => {
   const [phone, setPhone] = useState('');
 
   // Address fields
-  const [type, setType] = useState('');
   const [street, setStreet] = useState('');
   const [streetLine2, setStreetLine2] = useState('');
   const [city, setCity] = useState('');
@@ -43,7 +42,6 @@ const CustomerForm: React.FC = () => {
       if (email) queryParts.push(email);
       if (phone) queryParts.push(phone);
       const addressParts: string[] = [];
-      if (address.type) queryParts.push(address.type);
       if (address.street) addressParts.push(address.street);
       if (address.street_line_2) addressParts.push(address.street_line_2);
       if (address.city) addressParts.push(address.city);
@@ -69,7 +67,7 @@ const CustomerForm: React.FC = () => {
           name,
           email,
           phone,
-          addresses: [address],
+          address,
         });
 
         if (data.exists && data.customers.length > 0) {
@@ -94,7 +92,6 @@ const CustomerForm: React.FC = () => {
    */
   useEffect(() => {
     const address: Address = {
-      type,
       street,
       street_line_2: streetLine2,
       city,
@@ -108,7 +105,7 @@ const CustomerForm: React.FC = () => {
     return () => {
       fetchCustomers.cancel();
     };
-  }, [name, email, phone, type, street, streetLine2, city, stateField, zip, country, fetchCustomers]);
+  }, [name, email, phone, street, streetLine2, city, stateField, zip, country, fetchCustomers]);
 
   /**
    * Helper function to combine first and last names.
@@ -123,7 +120,7 @@ const CustomerForm: React.FC = () => {
   const formatAddress = (addresses: Address[]): string => {
     if (addresses.length === 0) return 'N/A';
     const addr = addresses[0]; // Assuming the first address is primary
-    const parts = [addr.type, addr.street];
+    const parts = [addr.street];
     if (addr.street_line_2) parts.push(addr.street_line_2);
     if (addr.city) parts.push(addr.city);
     if (addr.state) parts.push(addr.state);
@@ -147,7 +144,6 @@ const CustomerForm: React.FC = () => {
       mobile_number: phone,
       addresses: [
         {
-          type: type || 'Primary', // Defaulting to 'Primary' if type is not provided
           street,
           street_line_2: streetLine2 || undefined,
           city: city || undefined,
@@ -218,18 +214,6 @@ const CustomerForm: React.FC = () => {
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             placeholder="Enter customer phone number"
-          />
-        </div>
-
-        {/* Address Type Field */}
-        <div>
-          <label className="block mb-1 font-medium">Address Type</label>
-          <input
-            type="text"
-            className="w-full border rounded px-3 py-2"
-            value={type}
-            onChange={(e) => setType(e.target.value)}
-            placeholder="Enter address type"
           />
         </div>
 
@@ -373,7 +357,7 @@ const CustomerForm: React.FC = () => {
       {!loading &&
         !error &&
         customers.length === 0 &&
-        (name || email || phone || type || street || streetLine2 || city || stateField || zip || country) && (
+        (name || email || phone || street || streetLine2 || city || stateField || zip || country) && (
           <div className="mt-6">
             <p className="text-gray-700">No existing customers found with the provided information.</p>
           </div>
