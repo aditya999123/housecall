@@ -6,8 +6,6 @@ import debounce from 'lodash.debounce';
 import { useNavigate } from 'react-router-dom';
 
 interface Address {
-  id: string;
-  type: string;
   street: string;
   street_line_2?: string;
   city?: string;
@@ -55,7 +53,15 @@ const CustomerForm: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [address, setAddress] = useState('');
+
+  // Address fields
+  const [type, setType] = useState('');
+  const [street, setStreet] = useState('');
+  const [streetLine2, setStreetLine2] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [zip, setZip] = useState('');
+  const [country, setCountry] = useState('');
 
   // State variables for API responses and status
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -67,13 +73,20 @@ const CustomerForm: React.FC = () => {
    * This prevents excessive API calls by waiting for the user to stop typing.
    */
   const fetchCustomers = useCallback(
-    debounce(async (name: string, email: string, phone: string, address: string) => {
+    debounce(async (name: string, email: string, phone: string, address: Address) => {
       // Construct the search query by combining all non-empty fields
       const queryParts: string[] = [];
       if (name) queryParts.push(name);
       if (email) queryParts.push(email);
       if (phone) queryParts.push(phone);
-      if (address) queryParts.push(address);
+      const addressParts: string[] = [];
+      if (address.street) addressParts.push(address.street);
+      if (address.street_line_2) addressParts.push(address.street_line_2);
+      if (address.city) addressParts.push(address.city);
+      if (address.state) addressParts.push(address.state);
+      if (address.zip) addressParts.push(address.zip);
+      if (address.country) addressParts.push(address.country);
+      if (addressParts.length > 0) queryParts.push(addressParts.join(' '));
       const query = queryParts.join(' ');
 
       // If no fields are filled, clear the customers list and return
@@ -118,13 +131,21 @@ const CustomerForm: React.FC = () => {
    * whenever any of the form fields change.
    */
   useEffect(() => {
+    const address: Address = {
+      street,
+      street_line_2: streetLine2,
+      city,
+      state: state,
+      zip,
+      country: country || null,
+    };
     fetchCustomers(name, email, phone, address);
 
     // Cleanup function to cancel the debounce on unmount
     return () => {
       fetchCustomers.cancel();
     };
-  }, [name, email, phone, address, fetchCustomers]);
+  }, [name, email, phone, type, street, streetLine2, city, state, zip, country, fetchCustomers]);
 
   /**
    * Helper function to combine first and last names
@@ -203,15 +224,87 @@ const CustomerForm: React.FC = () => {
           />
         </div>
 
-        {/* Address Field */}
+        {/* Address Type Field */}
         <div>
-          <label className="block mb-1 font-medium">Address</label>
+          <label className="block mb-1 font-medium">Address Type</label>
           <input
             type="text"
             className="w-full border rounded px-3 py-2"
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            placeholder="Enter customer address"
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+            placeholder="Enter address type"
+          />
+        </div>
+
+        {/* Street Field */}
+        <div>
+          <label className="block mb-1 font-medium">Street</label>
+          <input
+            type="text"
+            className="w-full border rounded px-3 py-2"
+            value={street}
+            onChange={(e) => setStreet(e.target.value)}
+            placeholder="Enter street"
+          />
+        </div>
+
+        {/* Street Line 2 Field */}
+        <div>
+          <label className="block mb-1 font-medium">Street Line 2</label>
+          <input
+            type="text"
+            className="w-full border rounded px-3 py-2"
+            value={streetLine2}
+            onChange={(e) => setStreetLine2(e.target.value)}
+            placeholder="Enter street line 2"
+          />
+        </div>
+
+        {/* City Field */}
+        <div>
+          <label className="block mb-1 font-medium">City</label>
+          <input
+            type="text"
+            className="w-full border rounded px-3 py-2"
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            placeholder="Enter city"
+          />
+        </div>
+
+        {/* State Field */}
+        <div>
+          <label className="block mb-1 font-medium">State</label>
+          <input
+            type="text"
+            className="w-full border rounded px-3 py-2"
+            value={state}
+            onChange={(e) => setState(e.target.value)}
+            placeholder="Enter state"
+          />
+        </div>
+
+        {/* ZIP Field */}
+        <div>
+          <label className="block mb-1 font-medium">ZIP Code</label>
+          <input
+            type="text"
+            className="w-full border rounded px-3 py-2"
+            value={zip}
+            onChange={(e) => setZip(e.target.value)}
+            placeholder="Enter ZIP code"
+          />
+        </div>
+
+        {/* Country Field */}
+        <div>
+          <label className="block mb-1 font-medium">Country</label>
+          <input
+            type="text"
+            className="w-full border rounded px-3 py-2"
+            value={country}
+            onChange={(e) => setCountry(e.target.value)}
+            placeholder="Enter country"
           />
         </div>
       </div>
@@ -245,7 +338,7 @@ const CustomerForm: React.FC = () => {
                   <th className="py-2 px-4 border">Email</th>
                   <th className="py-2 px-4 border">Mobile Number</th>
                   <th className="py-2 px-4 border">Address</th>
-                  <th className="py-2 px-4 border">Actions</th> {/* New Actions Column */}
+                  <th className="py-2 px-4 border">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -277,7 +370,7 @@ const CustomerForm: React.FC = () => {
       )}
 
       {/* No Customers Found Message */}
-      {!loading && !error && customers.length === 0 && (name || email || phone || address) && (
+      {!loading && !error && customers.length === 0 && (name || email || phone || type || street || streetLine2 || city || state || zip || country) && (
         <div className="mt-6">
           <p className="text-gray-700">No existing customers found with the provided information.</p>
         </div>

@@ -19,13 +19,14 @@ const api: AxiosInstance = axios.create({
 
 // Interface Definitions
 interface Address {
-    line1: string;
-    line2?: string;
-    city?: string;
-    state?: string;
-    zip?: string;
-    country?: string;
+  street: string;
+  street_line_2?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  country?: string | null;
 }
+
 
 interface Customer {
     id: string;
@@ -57,7 +58,7 @@ interface Job {
  * @param fields - An object containing optional search fields: name, email, phone, address.
  * @returns A promise that resolves to an array of unique Customer objects.
  */
-export const findCustomerByQuery = async (fields: { name?: string; email?: string; phone?: string; address?: string; }): Promise<Customer[]> => {
+export const findCustomerByQuery = async (fields: { name?: string; email?: string; phone?: string; address?: Address; }): Promise<Customer[]> => {
     const { name, email, phone, address } = fields;
 
     const queries: string[] = [];
@@ -72,7 +73,12 @@ export const findCustomerByQuery = async (fields: { name?: string; email?: strin
         queries.push(phone);
     }
     if (address) {
-        queries.push(address);
+        if (address.street) {
+            queries.push(address.street);
+        }
+        if (address.street_line_2) {
+            queries.push(address.street_line_2);
+        }
     }
 
     if (queries.length === 0) {
