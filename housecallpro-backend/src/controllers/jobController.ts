@@ -1,7 +1,7 @@
 // src/controllers/jobController.ts
 
 import { Request, Response } from 'express';
-import { getJobsByCustomerId, createJob } from '../services/jobService';
+import { getJobsByCustomerId, createJob, getAllJobsSvc } from '../services/jobService';
 import { CreateJobPayload } from '../models/jobModel';
 
 /**
@@ -47,6 +47,23 @@ export const getJobsForCustomer = async (req: Request, res: Response): Promise<v
 
     try {
         const jobs = await getJobsByCustomerId(id);
+        res.json({ jobs });
+    } catch (error: any) {
+        console.error('Error in getJobsForCustomer:', error.message);
+        res.status(500).json({ error: error.message || 'Failed to fetch jobs.' });
+    }
+};
+
+
+/**
+ * Controller to retrieve all jobs.
+ * 
+ * @param req - Express Request object .
+ * @param res - Express Response object to send back the list of jobs.
+ */
+export const getAllJobs = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const jobs = await getAllJobsSvc();
         res.json({ jobs });
     } catch (error: any) {
         console.error('Error in getJobsForCustomer:', error.message);

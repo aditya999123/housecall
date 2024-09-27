@@ -2,11 +2,9 @@
 
 export interface CreateJobPayload {
     customer_id: string;
-    service_category: string;
-    service_type: string;
     scheduled_start: string; // ISO 8601 format
     scheduled_end: string; // ISO 8601 format
-    description?: string;
+    notes?: string;
     // Add other fields as required by the API
 }
 

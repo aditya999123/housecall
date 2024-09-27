@@ -20,6 +20,15 @@ export const getCustomerJobs = async (id: string): Promise<Job[]> => {
 };
 
 /**
+ * Fetch jobs associated with a customer.
+ */
+export const getAllJobs = async (): Promise<Job[]> => {
+  const response = await serverApi.get<{ jobs: Job[] }>(`/api/jobs`);
+  return response.data.jobs;
+};
+
+
+/**
  * Create a new job for a customer.
  */
 export const createJob = async (id: string, payload: CreateJobPayload): Promise<void> => {

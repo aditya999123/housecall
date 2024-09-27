@@ -1,9 +1,10 @@
 // src/components/CreateJobForm.tsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { CreateJobPayload } from '../types';
-import { createJob } from '../api/customers';
+import { CreateJobPayload, Job } from '../types';
+import { createJob, getCustomerJobs, getAllJobs } from '../api/customers';
+import { generateTimeSlots, filterBookedSlots } from '../utils/timeSlots';
 
 interface CreateJobFormProps {
   onJobCreated: () => void;
@@ -12,14 +13,39 @@ interface CreateJobFormProps {
 const CreateJobForm: React.FC<CreateJobFormProps> = ({ onJobCreated }) => {
   const { id } = useParams<{ id: string }>();
 
-  const [serviceCategory, setServiceCategory] = useState<string>('');
-  const [serviceType, setServiceType] = useState<string>('');
-  const [scheduledStart, setScheduledStart] = useState<string>('');
-  const [scheduledEnd, setScheduledEnd] = useState<string>('');
-  const [description, setDescription] = useState<string>('');
+  const [selectedSlot, setSelectedSlot] = useState<string>('');
+  const [slots, setSlots] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [bookedJobs, setBookedJobs] = useState<Job[]>([]);
+
+  useEffect(() => {
+    if (id) {
+      // Fetch booked jobs for the customer and set available slots
+      const fetchBookedJobs = async () => {
+        try {
+          // const jobs = await getCustomerJobs(id);
+          const jobs = await getAllJobs();
+          setBookedJobs(jobs);
+
+          const dayStart = new Date();
+          dayStart.setHours(9, 0, 0, 0); // Set to 9:00 AM with zero milliseconds
+
+          const dayEnd = new Date();
+          dayEnd.setHours(18, 0, 0, 0); // Set to 6:00 PM with zero milliseconds
+
+          const allSlots = generateTimeSlots(dayStart.toString(), dayEnd.toString());
+          const availableSlots = filterBookedSlots(allSlots, jobs);
+          setSlots(availableSlots);
+        } catch (err: any) {
+          console.error('Error fetching jobs:', err);
+        }
+      };
+
+      fetchBookedJobs();
+    }
+  }, [id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,24 +55,21 @@ const CreateJobForm: React.FC<CreateJobFormProps> = ({ onJobCreated }) => {
       return;
     }
 
-    // Validate date inputs
-    if (new Date(scheduledStart) >= new Date(scheduledEnd)) {
-      setError('Scheduled Start must be before Scheduled End.');
+    if (!selectedSlot) {
+      setError('Please select a time slot.');
       return;
     }
 
-    // Convert scheduledStart and scheduledEnd to ISO 8601 format
-    const isoScheduledStart = new Date(scheduledStart).toISOString();
-    const isoScheduledEnd = new Date(scheduledEnd).toISOString();
+    // Parse the selected time slot
+    const [start, end] = selectedSlot.split(' - ');
+    const scheduledStart = new Date(`1970-01-01T${start}:00`).toISOString();
+    const scheduledEnd = new Date(`1970-01-01T${end}:00`).toISOString();
 
     const jobPayload: CreateJobPayload = {
       customer_id: id,
-      service_category: serviceCategory,
-      service_type: serviceType,
-      scheduled_start: isoScheduledStart,
-      scheduled_end: isoScheduledEnd,
-      description: description || undefined,
-      // Add other fields as required by the API
+      scheduled_start: scheduledStart,
+      scheduled_end: scheduledEnd,
+      description: ''
     };
 
     setLoading(true);
@@ -56,16 +79,9 @@ const CreateJobForm: React.FC<CreateJobFormProps> = ({ onJobCreated }) => {
     try {
       await createJob(id, jobPayload);
       setSuccess('Job created successfully!');
-      // Clear form fields
-      setServiceCategory('');
-      setServiceType('');
-      setScheduledStart('');
-      setScheduledEnd('');
-      setDescription('');
-      // Notify parent component to refresh jobs list
+      setSelectedSlot('');
       onJobCreated();
     } catch (err: any) {
-      console.error('Error creating job:', err.response?.data || err.message);
       setError(err.response?.data?.error || 'Failed to create job.');
     } finally {
       setLoading(false);
@@ -79,64 +95,26 @@ const CreateJobForm: React.FC<CreateJobFormProps> = ({ onJobCreated }) => {
       {success && <p className="text-green-500 mb-2">{success}</p>}
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block mb-1 font-semibold">Service Category</label>
-          <input
-            type="text"
-            value={serviceCategory}
-            onChange={(e) => setServiceCategory(e.target.value)}
+          <label className="block mb-1 font-semibold">Select Time Slot</label>
+          <select
+            value={selectedSlot}
+            onChange={(e) => setSelectedSlot(e.target.value)}
             required
             className="w-full border px-3 py-2 rounded"
-            placeholder="e.g., Plumbing, Electrical"
-          />
+          >
+            <option value="">Select a time slot</option>
+            {slots.map((slot, index) => (
+              <option key={index} value={slot}>
+                {slot}
+              </option>
+            ))}
+          </select>
         </div>
-        <div>
-          <label className="block mb-1 font-semibold">Service Type</label>
-          <input
-            type="text"
-            value={serviceType}
-            onChange={(e) => setServiceType(e.target.value)}
-            required
-            className="w-full border px-3 py-2 rounded"
-            placeholder="e.g., Leak Fix, Wiring Installation"
-          />
-        </div>
-        <div>
-          <label className="block mb-1 font-semibold">Scheduled Start</label>
-          <input
-            type="datetime-local"
-            value={scheduledStart}
-            onChange={(e) => setScheduledStart(e.target.value)}
-            required
-            className="w-full border px-3 py-2 rounded"
-          />
-        </div>
-        <div>
-          <label className="block mb-1 font-semibold">Scheduled End</label>
-          <input
-            type="datetime-local"
-            value={scheduledEnd}
-            onChange={(e) => setScheduledEnd(e.target.value)}
-            required
-            className="w-full border px-3 py-2 rounded"
-          />
-        </div>
-        <div>
-          <label className="block mb-1 font-semibold">Description</label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="w-full border px-3 py-2 rounded"
-            placeholder="Optional job description..."
-          ></textarea>
-        </div>
-        {/* Add more fields as necessary */}
         <div className="flex justify-end">
           <button
             type="submit"
             disabled={loading}
-            className={`bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 ${
-              loading ? 'opacity-50 cursor-not-allowed' : ''
-            }`}
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
           >
             {loading ? 'Creating...' : 'Create Job'}
           </button>
@@ -147,4 +125,3 @@ const CreateJobForm: React.FC<CreateJobFormProps> = ({ onJobCreated }) => {
 };
 
 export default CreateJobForm;
-
