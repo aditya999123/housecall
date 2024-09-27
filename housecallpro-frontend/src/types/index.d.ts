@@ -7,6 +7,17 @@ export interface Address {
     country?: string | null;
 }
 
+export interface CreateJobPayload {
+    customer_id: string;
+    service_category: string;
+    service_type: string;
+    scheduled_start: string; // ISO 8601 format
+    scheduled_end: string; // ISO 8601 format
+    description?: string;
+    // Add other fields as per your requirements
+}
+
+
 export interface Customer {
     id: string;
     first_name: string;

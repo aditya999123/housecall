@@ -4,14 +4,14 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios, { AxiosInstance } from 'axios';
 import { Customer, Job } from '../types';
+import CreateJobForm from './CreateJobForm'; // Import the CreateJobForm component
 
 const serverApi: AxiosInstance = axios.create({
-  baseURL: 'http://localhost:5001',
+  baseURL: 'http://localhost:5001', // Adjust the base URL as needed
   headers: {
     'Content-Type': 'application/json',
   },
 });
-
 
 const CustomerDetails: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -24,50 +24,55 @@ const CustomerDetails: React.FC = () => {
     const [jobsLoading, setJobsLoading] = useState<boolean>(false);
     const [jobsError, setJobsError] = useState<string | null>(null);
 
+    // Fetch customer details
+    const fetchCustomerDetails = async () => {
+        if (!id) {
+            setError('No customer ID provided.');
+            return;
+        }
+
+        setLoading(true);
+        setError(null);
+
+        try {
+            const response = await serverApi.get<Customer>(`/api/customers/${id}`);
+            setCustomer(response.data);
+        } catch (err: any) {
+            console.error('Error fetching customer details:', err);
+            setError('Failed to fetch customer details.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Fetch jobs associated with the customer
+    const fetchJobs = async () => {
+        if (!id) return;
+
+        setJobsLoading(true);
+        setJobsError(null);
+
+        try {
+            const response = await serverApi.get<{ jobs: Job[] }>(`/api/customers/${id}/jobs`);
+            setJobs(response.data.jobs);
+        } catch (err: any) {
+            console.error('Error fetching jobs:', err);
+            setJobsError('Failed to fetch jobs.');
+        } finally {
+            setJobsLoading(false);
+        }
+    };
+
+    // Fetch data on component mount and when 'id' changes
     useEffect(() => {
-        const fetchCustomerDetails = async () => {
-            if (!id) {
-                setError('No customer ID provided.');
-                return;
-            }
-
-            setLoading(true);
-            setError(null);
-
-            try {
-                const response = await serverApi.get<Customer>(`/api/customers/${id}`);
-                setCustomer(response.data);
-            } catch (err: any) {
-                console.error('Error fetching customer details:', err);
-                setError('Failed to fetch customer details.');
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchCustomerDetails();
-    }, [id]);
-
-    useEffect(() => {
-        const fetchJobs = async () => {
-            if (!id) return;
-
-            setJobsLoading(true);
-            setJobsError(null);
-
-            try {
-                const response = await serverApi.get<{ jobs: Job[] }>(`/api/customers/${id}/jobs`);
-                setJobs(response.data.jobs);
-            } catch (err: any) {
-                console.error('Error fetching jobs:', err);
-                setJobsError('Failed to fetch jobs.');
-            } finally {
-                setJobsLoading(false);
-            }
-        };
-
         fetchJobs();
     }, [id]);
+
+    // Callback to refresh jobs after creating a new one
+    const handleJobCreated = () => {
+        fetchJobs();
+    };
 
     if (loading) {
         return <p className="mt-4 text-blue-500">Loading customer details...</p>;
@@ -205,6 +210,12 @@ const CustomerDetails: React.FC = () => {
                         </table>
                     </div>
                 )}
+            </div>
+
+            {/* Create Job Form Section */}
+            <div className="mt-6">
+                <h3 className="text-xl mb-2">Create a New Job</h3>
+                <CreateJobForm onJobCreated={handleJobCreated} />
             </div>
         </div>
     );

@@ -1,5 +1,15 @@
 // src/models/jobModel.ts
 
+export interface CreateJobPayload {
+    customer_id: string;
+    service_category: string;
+    service_type: string;
+    scheduled_start: string; // ISO 8601 format
+    scheduled_end: string; // ISO 8601 format
+    description?: string;
+    // Add other fields as required by the API
+}
+
 export interface Job {
     id: string;
     invoice_number: string;
