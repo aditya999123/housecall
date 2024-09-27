@@ -4,6 +4,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import apiRoutes from './routes/api';
+import jobRoutes from './routes/jobRoutes'
 
 dotenv.config();
 
@@ -26,6 +27,7 @@ app.use(express.json());
 
 // Apply API Routes
 app.use('/api', apiRoutes);
+app.use('/api', jobRoutes);
 
 // Health Check Endpoint
 app.get('/', (req, res) => {

@@ -1,5 +1,3 @@
-// src/services/housecallService.ts
-
 import axios, { AxiosInstance } from 'axios';
 import dotenv from 'dotenv';
 
@@ -45,7 +43,7 @@ interface JobDetails {
 
 interface Job {
     id: string;
-    customer_id: string;
+    customer: Customer;
     service: string;
     scheduled_time: string;
     // Add other relevant fields as per API response

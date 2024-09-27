@@ -46,6 +46,7 @@ export const getCustomerById = async (req: Request, res: Response) => {
     }
 };
 
+
 export const createCustomerController = async (req: Request, res: Response) => {
     const {
         first_name,
